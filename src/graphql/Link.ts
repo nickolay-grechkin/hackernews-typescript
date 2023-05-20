@@ -1,5 +1,5 @@
 import {extendType, idArg, nonNull, objectType, stringArg} from "nexus";
-import { NexusGenObjects } from "../../nexus-typegen";
+import {NexusGenObjects} from "../../nexus-typegen";
 
 export const Link = objectType({
     name: "Link",
@@ -10,26 +10,13 @@ export const Link = objectType({
     }
 });
 
-let links: NexusGenObjects["Link"][]= [   // 1
-    {
-        id: 1,
-        url: "www.howtographql.com",
-        description: "Fullstack tutorial for GraphQL",
-    },
-    {
-        id: 2,
-        url: "graphql.org",
-        description: "GraphQL official website",
-    },
-];
-
 export const LinkQuery = extendType({
     type: "Query",
     definition(t) {
         t.nonNull.list.nonNull.field("feed", {
             type: "Link",
             resolve(parent, args, context, info) {
-                return links;
+                return context.prisma.link.findMany();
             },
         });
         t.field("link", {
@@ -38,10 +25,14 @@ export const LinkQuery = extendType({
                 id: nonNull(idArg())
             },
 
-            resolve(parent, args) {
+            resolve(parent, args, context) {
                 const { id } = args;
 
-                return links.find(item => item.id === Number(id));
+                return context.prisma.link.findUnique({
+                    where: {
+                        id: Number(id)
+                    }
+                })
             }
         })
     },
@@ -58,40 +49,36 @@ export const LinkMutation = extendType({
             },
 
             resolve(parent, args, context) {
-                const { description, url } = args;  // 4
+                const { description, url } = args;
 
-                let idCount = links.length + 1;  // 5
-                const link = {
-                    id: idCount,
-                    description: description,
-                    url: url,
-                };
-                links.push(link);
-                return link;
+                return context.prisma.link.create({
+                    data: {
+                        description,
+                        url
+                    },
+                });
             },
         });
         t.field("update", {
             type: "Link",
             args: {
-                description: stringArg(),
-                url: stringArg(),
+                description: nonNull(stringArg()),
+                url: nonNull(stringArg()),
                 id: nonNull(idArg())
             },
 
-            resolve(parent, args) {
+            resolve(parent, args, context) {
                 const { description, url, id } = args;
 
-                const linkToUpdate = links.find(item => item.id === Number(id));
-                if (linkToUpdate) {
-                    if (description) {
-                        linkToUpdate.description = description;
+                return context.prisma.link.update({
+                    where: {
+                        id: Number(id)
+                    },
+                    data: {
+                        description,
+                        url
                     }
-                    if (url) {
-                        linkToUpdate.url = url;
-                    }
-                }
-
-                return linkToUpdate;
+                })
             }
         })
 
@@ -101,12 +88,12 @@ export const LinkMutation = extendType({
                 id: nonNull(idArg())
             },
 
-            resolve(parent, args) {
-                const { id } = args;
-
-                const linkToRemove = links.find(item => item.id === Number(id));
-                links = links.filter(item => item !== linkToRemove);
-                return linkToRemove;
+            resolve(parent, args, context) {
+                return context.prisma.link.delete({
+                    where: {
+                        id: Number(args.id)
+                    }
+                })
             }
         })
     }
