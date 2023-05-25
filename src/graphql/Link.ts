@@ -1,16 +1,23 @@
 import {extendType, idArg, nonNull, objectType, stringArg} from "nexus";
-import {NexusGenObjects} from "../../nexus-typegen";
 
-export const Link = objectType({
+const Link = objectType({
     name: "Link",
     definition(t) {
         t.nonNull.int("id");
         t.nonNull.string("description");
         t.nonNull.string("url");
-    }
+        t.field("postedBy", {
+            type: "User",
+            resolve(parent, args, context) {
+                return context.prisma.link
+                    .findUnique({ where: { id: parent.id } })
+                    .postedBy();
+            },
+        });
+    },
 });
 
-export const LinkQuery = extendType({
+const LinkQuery = extendType({
     type: "Query",
     definition(t) {
         t.nonNull.list.nonNull.field("feed", {
@@ -32,13 +39,13 @@ export const LinkQuery = extendType({
                     where: {
                         id: Number(id)
                     }
-                })
-            }
-        })
+                });
+            },
+        });
     },
 });
 
-export const LinkMutation = extendType({
+const LinkMutation = extendType({
     type: "Mutation",
     definition(t) {
         t.nonNull.field("post", {
@@ -97,4 +104,6 @@ export const LinkMutation = extendType({
             }
         })
     }
-})
+});
+
+export { Link, LinkQuery, LinkMutation };
